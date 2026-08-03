@@ -1,1 +1,389 @@
 
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Simulateur d'allocation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#12151a;
+    --panel:#1a1e26;
+    --panel-raised:#20242e;
+    --border:#2a2f3a;
+    --text:#edebe6;
+    --muted:#8891a0;
+    --gold:#c9a15e;
+    --gold-dim:#c9a15e33;
+    --pos:#5fbf8b;
+    --neg:#c65f52;
+    --warn:#c65f52;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    padding:28px 16px 60px;
+  }
+
+  .wrap{max-width:960px;margin:0 auto;}
+
+  header{margin-bottom:22px;}
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.5rem;
+    letter-spacing:-0.01em;
+    margin:0 0 4px;
+  }
+  .sub{color:var(--muted);font-size:0.85rem;}
+
+  /* --- Allocation tape (signature element) --- */
+  .tape-card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-bottom:18px;
+  }
+  .tape-head{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-bottom:10px;
+  }
+  .tape-label{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);}
+  .tape-total{
+    font-family:'JetBrains Mono',monospace;
+    font-size:1rem;font-weight:600;
+  }
+  .tape-total.over,.tape-total.under{color:var(--warn);}
+  .tape{
+    display:flex;height:26px;border-radius:6px;overflow:hidden;
+    background:#0000004d;border:1px solid var(--border);
+  }
+  .tape-seg{height:100%;transition:width .25s ease;min-width:0;}
+  .tape-empty{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-size:0.7rem;letter-spacing:0.05em;
+  }
+
+  /* --- Period tabs --- */
+  .tabs{display:flex;gap:6px;margin:16px 0 10px;}
+  .tab{
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.75rem;
+    padding:6px 12px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--muted);
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .tab:hover{color:var(--text);border-color:var(--gold);}
+  .tab.active{
+    background:var(--gold-dim);
+    border-color:var(--gold);
+    color:var(--gold);
+  }
+
+  /* --- Summary strip --- */
+  .summary{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .sum-cell{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+  }
+  .sum-cell.active{border-color:var(--gold);}
+  .sum-cell .k{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
+  .sum-cell .v{
+    font-family:'JetBrains Mono',monospace;
+    font-size:1.15rem;font-weight:600;margin-top:2px;
+  }
+
+  /* --- Rows --- */
+  .list{display:flex;flex-direction:column;gap:8px;}
+  .row{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:9px;
+    padding:12px 14px;
+    display:grid;
+    grid-template-columns:1fr 200px 70px 90px;
+    gap:14px;
+    align-items:center;
+  }
+  .row.zero{opacity:0.55;}
+  .name{
+    font-size:0.85rem;font-weight:500;line-height:1.25;
+  }
+  .isin{
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.65rem;color:var(--muted);margin-top:2px;
+  }
+  .perfs{
+    display:flex;gap:10px;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--muted);margin-top:4px;
+  }
+  .perfs span.pos{color:var(--pos);}
+  .perfs span.neg{color:var(--neg);}
+  .perfs span.sel{color:var(--gold);font-weight:600;}
+
+  .slider-cell{display:flex;flex-direction:column;gap:4px;}
+  input[type=range]{
+    -webkit-appearance:none;width:100%;height:4px;border-radius:2px;
+    background:var(--border);outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--gold);cursor:pointer;border:2px solid var(--bg);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;background:var(--gold);
+    cursor:pointer;border:2px solid var(--bg);
+  }
+
+  .pct-input{
+    font-family:'JetBrains Mono',monospace;
+    background:var(--panel-raised);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:6px;
+    width:60px;padding:5px 6px;
+    font-size:0.8rem;text-align:right;
+  }
+  .pct-input:focus{outline:none;border-color:var(--gold);}
+
+  .contrib{
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.85rem;font-weight:600;text-align:right;
+  }
+  .contrib.pos{color:var(--pos);}
+  .contrib.neg{color:var(--neg);}
+  .contrib.zero{color:var(--muted);}
+
+  .actions{
+    display:flex;gap:10px;margin-top:18px;
+  }
+  button.act{
+    font-family:'Inter',sans-serif;
+    font-size:0.8rem;font-weight:500;
+    padding:8px 16px;border-radius:7px;
+    border:1px solid var(--border);
+    background:var(--panel);color:var(--text);
+    cursor:pointer;
+  }
+  button.act:hover{border-color:var(--gold);color:var(--gold);}
+  button.act.primary{
+    background:var(--gold);color:#12151a;border-color:var(--gold);font-weight:600;
+  }
+  button.act.primary:hover{opacity:0.9;color:#12151a;}
+
+  @media (max-width:640px){
+    .row{grid-template-columns:1fr;gap:8px;}
+    .slider-cell{order:2;}
+    .pct-input{order:3;justify-self:start;}
+    .contrib{order:4;text-align:left;}
+    .summary{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Simulateur d'allocation</h1>
+    <div class="sub">Déplacez les curseurs pour tester une nouvelle répartition — les performances pondérées se recalculent en direct.</div>
+  </header>
+
+  <div class="tape-card">
+    <div class="tape-head">
+      <span class="tape-label">Allocation totale</span>
+      <span class="tape-total" id="totalLabel">100,0%</span>
+    </div>
+    <div class="tape" id="tape"></div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="list" id="list"></div>
+
+  <div class="actions">
+    <button class="act" id="resetBtn">Réinitialiser</button>
+    <button class="act primary" id="normalizeBtn">Normaliser à 100%</button>
+  </div>
+</div>
+
+<script>
+const PERIODS = [
+  {key:'p7', label:'7 jours'},
+  {key:'p1m', label:'1 mois'},
+  {key:'p3m', label:'3 mois'},
+  {key:'ytd', label:'1er janv.'}
+];
+
+const initialData = [
+  {name:"iShares MSCI Global Semiconductors UCITS ETF USD Acc", isin:"IE000I8KRLL9", p7:-7.0, p1m:-22.0, p3m:13.6, ytd:65.9, alloc:10},
+  {name:"Amundi Euro Stoxx Banks UCITS ETF Acc", isin:"LU1829219390", p7:2.4, p1m:5.6, p3m:21.0, ytd:19.4, alloc:15},
+  {name:"Amundi MSCI EM Asia UCITS ETF-C EUR", isin:"LU1681044480", p7:-0.7, p1m:-8.4, p3m:4.1, ytd:19.2, alloc:10},
+  {name:"Amundi PEA Nasdaq-100 UCITS ETF Acc", isin:"FR0011871110", p7:-2.0, p1m:-7.6, p3m:4.9, ytd:13.6, alloc:10},
+  {name:"Axiom European Banks Equity RC EUR(V)", isin:"LU1876459303", p7:1.7, p1m:3.4, p3m:10.2, ytd:12.5, alloc:0},
+  {name:"Amundi MSCI World Swap II UCITS ETF Dist", isin:"FR0010315770", p7:-0.8, p1m:-0.7, p3m:6.2, ytd:11.6, alloc:50},
+  {name:"Amundi Euro Stoxx 50 II UCITS ETF Acc", isin:"FR0007054358", p7:1.2, p1m:0.5, p3m:9.5, ytd:10.8, alloc:5},
+  {name:"Amundi CAC 40 UCITS ETF Dist", isin:"FR0007052782", p7:1.8, p1m:1.4, p3m:6.6, ytd:6.4, alloc:0},
+  {name:"WisdomTree Europe Defence UCITS ETF EUR Acc", isin:"IE0002Y8CX98", p7:3.3, p1m:9.2, p3m:4.8, ytd:4.6, alloc:0},
+  {name:"Pluvalca Global Blockchain Equity A", isin:"FR001400CCI4", p7:-3.7, p1m:-4.6, p3m:2.4, ytd:-3.9, alloc:0},
+];
+
+// muted palette derived from the gold accent, walked around the wheel
+const palette = ["#c9a15e","#8fa6c9","#8bb98f","#c98b9e","#b58bc9","#c9b58b","#7fb0b0","#c97f7f","#a3a3d6","#9ccf9c"];
+
+let data = JSON.parse(JSON.stringify(initialData));
+let selectedPeriod = 'ytd';
+
+const tapeEl = document.getElementById('tape');
+const totalLabelEl = document.getElementById('totalLabel');
+const tabsEl = document.getElementById('tabs');
+const summaryEl = document.getElementById('summary');
+const listEl = document.getElementById('list');
+
+function fmt(n, withSign=true){
+  const s = n.toFixed(1).replace('.', ',');
+  if(withSign && n > 0) return '+' + s + '%';
+  return s + '%';
+}
+
+function totalAlloc(){
+  return data.reduce((s,d)=>s+d.alloc,0);
+}
+
+function weightedFor(key){
+  return data.reduce((s,d)=>s + d[key]*d.alloc/100, 0);
+}
+
+function renderTabs(){
+  tabsEl.innerHTML = '';
+  PERIODS.forEach(p=>{
+    const b = document.createElement('button');
+    b.className = 'tab' + (p.key===selectedPeriod ? ' active' : '');
+    b.textContent = p.label;
+    b.onclick = ()=>{ selectedPeriod = p.key; renderAll(); };
+    tabsEl.appendChild(b);
+  });
+}
+
+function renderTape(){
+  const total = totalAlloc();
+  totalLabelEl.textContent = fmt(total, false);
+  totalLabelEl.className = 'tape-total' + (Math.abs(total-100) > 0.05 ? (total>100?' over':' under') : '');
+
+  tapeEl.innerHTML = '';
+  if(total <= 0){
+    const e = document.createElement('div');
+    e.className = 'tape-empty';
+    e.textContent = 'aucune allocation';
+    tapeEl.appendChild(e);
+    return;
+  }
+  data.forEach((d,i)=>{
+    if(d.alloc <= 0) return;
+    const seg = document.createElement('div');
+    seg.className = 'tape-seg';
+    seg.style.width = (d.alloc/Math.max(total,100))*100 + '%';
+    seg.style.background = palette[i % palette.length];
+    seg.title = d.name + ' — ' + fmt(d.alloc, false);
+    tapeEl.appendChild(seg);
+  });
+}
+
+function renderSummary(){
+  summaryEl.innerHTML = '';
+  PERIODS.forEach(p=>{
+    const val = weightedFor(p.key);
+    const cell = document.createElement('div');
+    cell.className = 'sum-cell' + (p.key===selectedPeriod ? ' active' : '');
+    cell.innerHTML = `<div class="k">${p.label}</div><div class="v" style="color:${val>=0?'var(--pos)':'var(--neg)'}">${fmt(val)}</div>`;
+    summaryEl.appendChild(cell);
+  });
+}
+
+function renderList(){
+  listEl.innerHTML = '';
+  data.forEach((d,i)=>{
+    const row = document.createElement('div');
+    row.className = 'row' + (d.alloc<=0 ? ' zero' : '');
+
+    const contribVal = d[selectedPeriod]*d.alloc/100;
+
+    row.innerHTML = `
+      <div>
+        <div class="name">${d.name}</div>
+        <div class="isin">${d.isin}</div>
+        <div class="perfs">
+          <span class="${d.p7>=0?'pos':'neg'}${selectedPeriod==='p7'?' sel':''}">7j ${fmt(d.p7)}</span>
+          <span class="${d.p1m>=0?'pos':'neg'}${selectedPeriod==='p1m'?' sel':''}">1m ${fmt(d.p1m)}</span>
+          <span class="${d.p3m>=0?'pos':'neg'}${selectedPeriod==='p3m'?' sel':''}">3m ${fmt(d.p3m)}</span>
+          <span class="${d.ytd>=0?'pos':'neg'}${selectedPeriod==='ytd'?' sel':''}">YTD ${fmt(d.ytd)}</span>
+        </div>
+      </div>
+      <div class="slider-cell">
+        <input type="range" min="0" max="100" step="0.5" value="${d.alloc}" data-idx="${i}" class="slider">
+      </div>
+      <input type="number" min="0" max="100" step="0.5" value="${d.alloc}" data-idx="${i}" class="pct-input">
+      <div class="contrib ${contribVal>0?'pos':contribVal<0?'neg':'zero'}">${fmt(contribVal)}</div>
+    `;
+    listEl.appendChild(row);
+  });
+
+  listEl.querySelectorAll('.slider').forEach(el=>{
+    el.addEventListener('input', e=>{
+      const idx = +e.target.dataset.idx;
+      data[idx].alloc = +e.target.value;
+      renderAll();
+    });
+  });
+  listEl.querySelectorAll('.pct-input').forEach(el=>{
+    el.addEventListener('input', e=>{
+      const idx = +e.target.dataset.idx;
+      let v = +e.target.value;
+      if(isNaN(v)) v = 0;
+      v = Math.max(0, Math.min(100, v));
+      data[idx].alloc = v;
+      renderAll();
+    });
+  });
+}
+
+function renderAll(){
+  renderTabs();
+  renderTape();
+  renderSummary();
+  renderList();
+}
+
+document.getElementById('resetBtn').onclick = ()=>{
+  data = JSON.parse(JSON.stringify(initialData));
+  renderAll();
+};
+
+document.getElementById('normalizeBtn').onclick = ()=>{
+  const total = totalAlloc();
+  if(total <= 0) return;
+  data.forEach(d=> d.alloc = Math.round((d.alloc/total)*1000)/10 );
+  renderAll();
+};
+
+renderAll();
+</script>
+</body>
+</html>
