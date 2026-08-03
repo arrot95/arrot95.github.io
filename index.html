@@ -196,6 +196,8 @@
         </tr>
 
     </tbody>
+    <p id="totalPerfPonderee" style="font-weight:bold; font-size:18px; margin-top:20px;"></p>
+
 </table>
 
 <p id="totalAllocation"></p>
@@ -275,6 +277,17 @@ const colors = [
 
     document.getElementById('perfGlobale').textContent =
         "Performance globale pondérée : " + perfGlobale.toFixed(2) + " %";
+     
+// Total des performances pondérées (somme des perf pondérées de chaque ligne)
+let totalPerfPonderee = rows.reduce((sum, r) => {
+    const s = r.querySelector('input[type="range"]');
+    const p = parseFloat(r.getAttribute('data-perf'));
+    const a = parseFloat(s.value);
+    return sum + (a / 100) * p;
+}, 0);
+
+document.getElementById('totalPerfPonderee').textContent =
+    "Total des performances pondérées : " + totalPerfPonderee.toFixed(2) + " %";
 
     drawPieChart(allocations);
     updateLegend(allocations);
