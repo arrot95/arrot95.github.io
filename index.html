@@ -201,8 +201,165 @@
 <p id="totalAllocation"></p>
 <p id="perfGlobale"></p>
 
-     
-    
+   <!-- PIE CHART -->
+<canvas id="pieChart" width="400" height="400"></canvas>
+
+<!-- LÉGENDE -->
+<div id="legend"></div>
+
+<!-- BAR CHART -->
+<canvas id="barChart" width="700" height="350"></canvas>
+
+<script>
+const colors = [
+    "#ff6384", "#36a2eb", "#cc65fe", "#ffce56",
+    "#4bc0c0", "#9966ff", "#ff9f40", "#66ff66",
+    "#ff6666", "#66b3ff"
+];
+  
+ function updateAllocation(slider) {
+    const rows = Array.from(document.querySelectorAll('#allocationTable tbody tr'));
+
+    // 1️⃣ Allocation modifiée
+    const changedRow = slider.closest('tr');
+    const changedValue = parseFloat(slider.value);
+
+    // 2️⃣ Somme des autres allocations
+    const otherRows = rows.filter(r => r !== changedRow);
+    const otherTotal = otherRows.reduce((sum, r) => {
+        const s = r.querySelector('input[type="range"]');
+        return sum + parseFloat(s.value);
+    }, 0);
+
+    // 3️⃣ Ajustement automatique pour que le total = 100%
+    const remaining = 100 - changedValue;
+
+    if (remaining < 0) remaining = 0;
+
+    otherRows.forEach(r => {
+        const s = r.querySelector('input[type="range"]');
+        const oldVal = parseFloat(s.value);
+
+        const newVal = otherTotal > 0 ? (oldVal / otherTotal) * remaining : 0;
+
+        s.value = newVal.toFixed(1);
+        r.querySelector('.allocValue').textContent = newVal.toFixed(1);
+    });
+
+    // 4️⃣ Calcul des performances pondérées
+    let total = 0;
+    let perfGlobale = 0;
+
+    const allocations = [];
+
+    rows.forEach((r, index) => {
+        const s = r.querySelector('input[type="range"]');
+        const p = parseFloat(r.getAttribute('data-perf'));
+        const a = parseFloat(s.value);
+
+        total += a;
+        perfGlobale += (a / 100) * p;
+
+        r.querySelector('.allocValue').textContent = a.toFixed(1);
+        r.querySelector('.perfPonderee').textContent = ((a / 100) * p).toFixed(2) + " %";
+
+        allocations.push({
+            name: r.children[0].textContent,
+            value: a,
+            color: colors[index % colors.length]
+        });
+    });
+
+    document.getElementById('totalAllocation').textContent =
+        "Total allocation : " + total.toFixed(1) + " %";
+
+    document.getElementById('perfGlobale').textContent =
+        "Performance globale pondérée : " + perfGlobale.toFixed(2) + " %";
+
+    drawPieChart(allocations);
+    updateLegend(allocations);
+    drawBarChart(allocations);
+}
+
+function drawPieChart(data) {
+    const canvas = document.getElementById("pieChart");
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const total = data.reduce((sum, item) => sum + item.value, 0);
+    let startAngle = 0;
+
+    data.forEach(item => {
+        if (item.value > 0) {
+            const sliceAngle = (item.value / total) * 2 * Math.PI;
+
+            ctx.beginPath();
+            ctx.moveTo(200, 200);
+            ctx.arc(200, 200, 180, startAngle, startAngle + sliceAngle);
+            ctx.closePath();
+            ctx.fillStyle = item.color;
+            ctx.fill();
+
+            startAngle += sliceAngle;
+        }
+    });
+}
+
+function updateLegend(data) {
+    const legend = document.getElementById("legend");
+    legend.innerHTML = "";
+
+    data.forEach(item => {
+        if (item.value > 0) {
+            const div = document.createElement("div");
+            div.className = "legend-item";
+
+            div.innerHTML = `
+                <div class="color-box" style="background:${item.color}"></div>
+                ${item.name} : ${item.value.toFixed(1)}%
+            `;
+
+            legend.appendChild(div);
+        }
+    });
+}
+
+function drawBarChart(data) {
+    const canvas = document.getElementById("barChart");
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const max = Math.max(...data.map(item => item.value));
+    const barWidth = 40;
+    const gap = 20;
+    const startX = 50;
+    const baseY = 300;
+
+    data.forEach((item, index) => {
+        const barHeight = (item.value / max) * 250;
+
+        ctx.fillStyle = item.color;
+        ctx.fillRect(
+            startX + index * (barWidth + gap),
+            baseY - barHeight,
+            barWidth,
+            barHeight
+        );
+
+        ctx.fillStyle = "#000";
+        ctx.font = "14px Arial";
+        ctx.fillText(item.value.toFixed(1) + "%", startX + index * (barWidth + gap), baseY - barHeight - 10);
+
+        ctx.fillText(item.name.substring(0, 8), startX + index * (barWidth + gap), baseY + 20);
+    });
+}
+
+updateAllocation(document.querySelector('input[type="range"]'));
+</script>
+
+</body>
+</html>
+   
       
 
 
