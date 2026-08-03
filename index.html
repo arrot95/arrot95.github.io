@@ -1,378 +1,393 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <title>Allocation interactive complète</title>
-    <style>
-        body {
-            background-color: #ffffff;
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            color: #222;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: center;
-        }
-        input[type="range"] {
-            width: 120px;
-        }
-        canvas {
-            margin-top: 40px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        #legend {
-            margin-top: 20px;
-            font-size: 16px;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 6px;
-        }
-        .color-box {
-            width: 18px;
-            height: 18px;
-            margin-right: 10px;
-        }
-        .positive { color: green; font-weight: bold; }
-        .negative { color: red; font-weight: bold; }
-    </style>
+<meta charset="UTF-8">
+<title>Simulateur d'allocation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#fbfaf8;
+    --panel:#ffffff;
+    --panel-raised:#f3f1ec;
+    --border:#e3e0d8;
+    --text:#211f1a;
+    --muted:#78746a;
+    --gold:#a8783c;
+    --gold-dim:#a8783c1f;
+    --pos:#2f8f5b;
+    --neg:#b8503f;
+    --warn:#b8503f;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    padding:28px 16px 60px;
+  }
+
+  .wrap{max-width:960px;margin:0 auto;}
+
+  header{margin-bottom:22px;}
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:1.5rem;
+    letter-spacing:-0.01em;
+    margin:0 0 4px;
+  }
+  .sub{color:var(--muted);font-size:0.85rem;}
+
+  /* --- Allocation tape (signature element) --- */
+  .tape-card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-bottom:18px;
+    box-shadow:0 1px 3px rgba(33,31,26,0.05);
+  }
+  .tape-head{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-bottom:10px;
+  }
+  .tape-label{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);}
+  .tape-total{
+    font-family:'JetBrains Mono',monospace;
+    font-size:1rem;font-weight:600;
+  }
+  .tape-total.over,.tape-total.under{color:var(--warn);}
+  .tape{
+    display:flex;height:26px;border-radius:6px;overflow:hidden;
+    background:#f0eee8;border:1px solid var(--border);
+  }
+  .tape-seg{height:100%;transition:width .25s ease;min-width:0;}
+  .tape-empty{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-size:0.7rem;letter-spacing:0.05em;
+  }
+
+  /* --- Period tabs --- */
+  .tabs{display:flex;gap:6px;margin:16px 0 10px;}
+  .tab{
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.75rem;
+    padding:6px 12px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--muted);
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .tab:hover{color:var(--text);border-color:var(--gold);}
+  .tab.active{
+    background:var(--gold-dim);
+    border-color:var(--gold);
+    color:var(--gold);
+  }
+
+  /* --- Summary strip --- */
+  .summary{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .sum-cell{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px 12px;
+  }
+  .sum-cell.active{border-color:var(--gold);}
+  .sum-cell .k{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
+  .sum-cell .v{
+    font-family:'JetBrains Mono',monospace;
+    font-size:1.15rem;font-weight:600;margin-top:2px;
+  }
+
+  /* --- Rows --- */
+  .list{display:flex;flex-direction:column;gap:8px;}
+  .row{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:9px;
+    padding:12px 14px;
+    display:grid;
+    grid-template-columns:1fr 200px 70px 90px;
+    gap:14px;
+    align-items:center;
+    box-shadow:0 1px 2px rgba(33,31,26,0.03);
+  }
+  .row.zero{opacity:0.55;}
+  .name{
+    font-size:0.85rem;font-weight:500;line-height:1.25;
+  }
+  .isin{
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.65rem;color:var(--muted);margin-top:2px;
+  }
+  .perfs{
+    display:flex;gap:10px;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--muted);margin-top:4px;
+  }
+  .perfs span.pos{color:var(--pos);}
+  .perfs span.neg{color:var(--neg);}
+  .perfs span.sel{color:var(--gold);font-weight:600;}
+
+  .slider-cell{display:flex;flex-direction:column;gap:4px;}
+  input[type=range]{
+    -webkit-appearance:none;width:100%;height:4px;border-radius:2px;
+    background:var(--border);outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--gold);cursor:pointer;border:2px solid var(--bg);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;background:var(--gold);
+    cursor:pointer;border:2px solid var(--bg);
+  }
+
+  .pct-input{
+    font-family:'JetBrains Mono',monospace;
+    background:var(--panel-raised);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:6px;
+    width:60px;padding:5px 6px;
+    font-size:0.8rem;text-align:right;
+  }
+  .pct-input:focus{outline:none;border-color:var(--gold);}
+
+  .contrib{
+    font-family:'JetBrains Mono',monospace;
+    font-size:0.85rem;font-weight:600;text-align:right;
+  }
+  .contrib.pos{color:var(--pos);}
+  .contrib.neg{color:var(--neg);}
+  .contrib.zero{color:var(--muted);}
+
+  .actions{
+    display:flex;gap:10px;margin-top:18px;
+  }
+  button.act{
+    font-family:'Inter',sans-serif;
+    font-size:0.8rem;font-weight:500;
+    padding:8px 16px;border-radius:7px;
+    border:1px solid var(--border);
+    background:var(--panel);color:var(--text);
+    cursor:pointer;
+  }
+  button.act:hover{border-color:var(--gold);color:var(--gold);}
+  button.act.primary{
+    background:var(--gold);color:#12151a;border-color:var(--gold);font-weight:600;
+  }
+  button.act.primary:hover{opacity:0.9;color:#12151a;}
+
+  @media (max-width:640px){
+    .row{grid-template-columns:1fr;gap:8px;}
+    .slider-cell{order:2;}
+    .pct-input{order:3;justify-self:start;}
+    .contrib{order:4;text-align:left;}
+    .summary{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
 </head>
 <body>
+<div class="wrap">
+  <header>
+    <h1>Simulateur d'allocation</h1>
+    <div class="sub">Déplacez les curseurs pour tester une nouvelle répartition — les performances pondérées se recalculent en direct.</div>
+  </header>
 
-<h1>Simulateur d'allocation</h1>
+  <div class="tape-card">
+    <div class="tape-head">
+      <span class="tape-label">Allocation totale</span>
+      <span class="tape-total" id="totalLabel">100,0%</span>
+    </div>
+    <div class="tape" id="tape"></div>
+  </div>
 
-<table id="allocationTable">
-    <thead>
-        <tr>
-            <th>Nom</th>
-            <th>7 jours</th>
-            <th>1 mois</th>
-            <th>3 mois</th>
-            <th>YTD</th>
-            <th>Allocation (%)</th>
-            <th>Perf pondérée</th>
-        </tr>
-    </thead>
-    <tbody>
+  <div class="tabs" id="tabs"></div>
 
-        <tr data-perf="65.9">
-            <td>Semiconductors</td>
-            <td class="negative">-7,0%</td>
-            <td class="negative">-22,0%</td>
-            <td class="positive">+13,6%</td>
-            <td class="positive">+65,9%</td>
-            <td>
-                <input type="range" min="0" max="100" value="10" oninput="updateAllocation(this)">
-                <span class="allocValue">10</span>%
-            </td>
-            <td class="perfPonderee YTD"></td>
-        </tr>
+  <div class="summary" id="summary"></div>
 
-        <tr data-perf="19.4">
-            <td>Euro Stoxx Banks</td>
-            <td class="positive">+2,4%</td>
-            <td class="positive">+5,6%</td>
-            <td class="positive">+21,0%</td>
-            <td class="positive">+19,4%</td>
-            <td>
-                <input type="range" min="0" max="100" value="15" oninput="updateAllocation(this)">
-                <span class="allocValue">15</span>%
-            </td>
-            <td class="perfPonderee"></td>
-        </tr>
+  <div class="list" id="list"></div>
 
-        <tr data-perf="19.2">
-            <td>MSCI EM Asia</td>
-            <td class="negative">-0,7%</td>
-            <td class="negative">-8,4%</td>
-            <td class="positive">+4,1%</td>
-            <td class="positive">+19,2%</td>
-            <td>
-                <input type="range" min="0" max="100" value="10" oninput="updateAllocation(this)">
-                <span class="allocValue">10</span>%
-            </td>
-            <td class="perfPonderee YTD"></td>
-        </tr>
-
-        <tr data-perf="13.6">
-            <td>Nasdaq-100</td>
-            <td class="negative">-2,0%</td>
-            <td class="negative">-7,6%</td>
-            <td class="positive">+4,9%</td>
-            <td class="positive">+13,6%</td>
-            <td>
-                <input type="range" min="0" max="100" value="10" oninput="updateAllocation(this)">
-                <span class="allocValue">10</span>%
-            </td>
-            <td class="perfPonderee"></td>
-        </tr>
-
-        <tr data-perf="12.5">
-            <td>Axiom Banks</td>
-            <td class="positive">+1,7%</td>
-            <td class="positive">+3,4%</td>
-            <td class="positive">+10,2%</td>
-            <td class="positive">+12,5%</td>
-            <td>
-                <input type="range" min="0" max="100" value="10" oninput="updateAllocation(this)">
-                <span class="allocValue">10</span>%
-            </td>
-            <td class="perfPonderee YTD"></td>
-        </tr>
-
-        <tr data-perf="11.6">
-            <td>MSCI World Swap II</td>
-            <td class="negative">-0,8%</td>
-            <td class="negative">-0,7%</td>
-            <td class="positive">+6,2%</td>
-            <td class="positive">+11,6%</td>
-            <td>
-                <input type="range" min="0" max="100" value="50" oninput="updateAllocation(this)">
-                <span class="allocValue">50</span>%
-            </td>
-            <td class="perfPonderee"></td>
-        </tr>
-
-        <tr data-perf="10.8">
-            <td>Euro Stoxx 50</td>
-            <td class="positive">+1,2%</td>
-            <td class="positive">+0,1%</td>
-            <td class="positive">+9,5%</td>
-            <td class="positive">+10,8%</td>
-            <td>
-                <input type="range" min="0" max="100" value="5" oninput="updateAllocation(this)">
-                <span class="allocValue">5</span>%
-            </td>
-            <td class="perfPonderee"></td>
-        </tr>
-
-        <tr data-perf="6.4">
-            <td>CAC 40</td>
-            <td class="positive">+1,8%</td>
-            <td class="positive">+1,4%</td>
-            <td class="positive">+6,6%</td>
-            <td class="positive">+6,4%</td>
-            <td>
-                <input type="range" min="0" max="100" value="0" oninput="updateAllocation(this)">
-                <span class="allocValue">0</span>%
-            </td>
-            <td class="perfPonderee YTD"></td>
-        </tr>
-
-        <tr data-perf="4.6">
-            <td>Defence</td>
-            <td class="positive">+3,3%</td>
-            <td class="positive">+9,2%</td>
-            <td class="positive">+4,8%</td>
-            <td class="positive">+4,6%</td>
-            <td>
-                <input type="range" min="0" max="100" value="0" oninput="updateAllocation(this)">
-                <span class="allocValue">0</span>%
-            </td>
-            <td class="perfPonderee"></td>
-        </tr>
-
-        <tr data-perf="-3.9">
-            <td>Blockchain</td>
-            <td class="negative">-3,7%</td>
-            <td class="negative">-4,6%</td>
-            <td class="positive">+2,4%</td>
-            <td class="negative">-3,9%</td>
-            <td>
-                <input type="range" min="0" max="100" value="0" oninput="updateAllocation(this)">
-                <span class="allocValue">0</span>%
-            </td>
-            <td class="perfPonderee"></td>
-        </tr>
-
-    </tbody>
-    <p id="totalPerfPonderee" style="font-weight:bold; font-size:18px; margin-top:20px;"></p>
-
-</table>
-
-<p id="totalAllocation"></p>
-<p id="perfGlobale"></p>
-
-   <!-- PIE CHART -->
-<canvas id="pieChart" width="400" height="400"></canvas>
-
-<!-- LÉGENDE -->
-<div id="legend"></div>
-
-<!-- BAR CHART -->
-<canvas id="barChart" width="700" height="350"></canvas>
+  <div class="actions">
+    <button class="act" id="resetBtn">Réinitialiser</button>
+    <button class="act primary" id="normalizeBtn">Normaliser à 100%</button>
+  </div>
+</div>
 
 <script>
-const colors = [
-    "#ff6384", "#36a2eb", "#cc65fe", "#ffce56",
-    "#4bc0c0", "#9966ff", "#ff9f40", "#66ff66",
-    "#ff6666", "#66b3ff"
+const PERIODS = [
+  {key:'p7', label:'7 jours'},
+  {key:'p1m', label:'1 mois'},
+  {key:'p3m', label:'3 mois'},
+  {key:'ytd', label:'1er janv.'}
 ];
-  
- function updateAllocation(slider) {
-    const rows = Array.from(document.querySelectorAll('#allocationTable tbody tr'));
 
-    // 1️⃣ Allocation modifiée
-    const changedRow = slider.closest('tr');
-    const changedValue = parseFloat(slider.value);
+const initialData = [
+  {name:"iShares MSCI Global Semiconductors UCITS ETF USD Acc", isin:"IE000I8KRLL9", p7:-7.0, p1m:-22.0, p3m:13.6, ytd:65.9, alloc:10},
+  {name:"Amundi Euro Stoxx Banks UCITS ETF Acc", isin:"LU1829219390", p7:2.4, p1m:5.6, p3m:21.0, ytd:19.4, alloc:15},
+  {name:"Amundi MSCI EM Asia UCITS ETF-C EUR", isin:"LU1681044480", p7:-0.7, p1m:-8.4, p3m:4.1, ytd:19.2, alloc:10},
+  {name:"Amundi PEA Nasdaq-100 UCITS ETF Acc", isin:"FR0011871110", p7:-2.0, p1m:-7.6, p3m:4.9, ytd:13.6, alloc:10},
+  {name:"Axiom European Banks Equity RC EUR(V)", isin:"LU1876459303", p7:1.7, p1m:3.4, p3m:10.2, ytd:12.5, alloc:0},
+  {name:"Amundi MSCI World Swap II UCITS ETF Dist", isin:"FR0010315770", p7:-0.8, p1m:-0.7, p3m:6.2, ytd:11.6, alloc:50},
+  {name:"Amundi Euro Stoxx 50 II UCITS ETF Acc", isin:"FR0007054358", p7:1.2, p1m:0.5, p3m:9.5, ytd:10.8, alloc:5},
+  {name:"Amundi CAC 40 UCITS ETF Dist", isin:"FR0007052782", p7:1.8, p1m:1.4, p3m:6.6, ytd:6.4, alloc:0},
+  {name:"WisdomTree Europe Defence UCITS ETF EUR Acc", isin:"IE0002Y8CX98", p7:3.3, p1m:9.2, p3m:4.8, ytd:4.6, alloc:0},
+  {name:"Pluvalca Global Blockchain Equity A", isin:"FR001400CCI4", p7:-3.7, p1m:-4.6, p3m:2.4, ytd:-3.9, alloc:0},
+];
 
-    // 2️⃣ Somme des autres allocations
-    const otherRows = rows.filter(r => r !== changedRow);
-    const otherTotal = otherRows.reduce((sum, r) => {
-        const s = r.querySelector('input[type="range"]');
-        return sum + parseFloat(s.value);
-    }, 0);
+// muted palette derived from the gold accent, walked around the wheel
+const palette = ["#c9a15e","#8fa6c9","#8bb98f","#c98b9e","#b58bc9","#c9b58b","#7fb0b0","#c97f7f","#a3a3d6","#9ccf9c"];
 
-    // 3️⃣ Ajustement automatique pour que le total = 100%
-    const remaining = 100 - changedValue;
+let data = JSON.parse(JSON.stringify(initialData));
+let selectedPeriod = 'ytd';
 
-    if (remaining < 0) remaining = 0;
+const tapeEl = document.getElementById('tape');
+const totalLabelEl = document.getElementById('totalLabel');
+const tabsEl = document.getElementById('tabs');
+const summaryEl = document.getElementById('summary');
+const listEl = document.getElementById('list');
 
-    otherRows.forEach(r => {
-        const s = r.querySelector('input[type="range"]');
-        const oldVal = parseFloat(s.value);
-
-        const newVal = otherTotal > 0 ? (oldVal / otherTotal) * remaining : 0;
-
-        s.value = newVal.toFixed(1);
-        r.querySelector('.allocValue').textContent = newVal.toFixed(1);
-    });
-
-    // 4️⃣ Calcul des performances pondérées
-    let total = 0;
-    let perfGlobale = 0;
-
-    const allocations = [];
-
-    rows.forEach((r, index) => {
-        const s = r.querySelector('input[type="range"]');
-        const p = parseFloat(r.getAttribute('data-perf'));
-        const a = parseFloat(s.value);
-
-        total += a;
-        perfGlobale += (a / 100) * p;
-
-        r.querySelector('.allocValue').textContent = a.toFixed(1);
-        r.querySelector('.perfPonderee YTD').textContent = ((a / 100) * p).toFixed(2) + " %";
-
-        allocations.push({
-            name: r.children[0].textContent,
-            value: a,
-            color: colors[index % colors.length]
-        });
-    });
-
-    document.getElementById('totalAllocation').textContent =
-        "Total allocation : " + total.toFixed(1) + " %";
-
-    document.getElementById('perfGlobale').textContent =
-        "Performance globale pondérée : " + perfGlobale.toFixed(2) + " %";
-     
-// Total des performances pondérées (somme des perf pondérées YTD de chaque ligne)
-let totalPerfPonderee = rows.reduce((sum, r) => {
-    const s = r.querySelector('input[type="range"]');
-    const p = parseFloat(r.getAttribute('data-perf'));
-    const a = parseFloat(s.value);
-    return sum + (a / 100) * p;
-}, 0);
-
-document.getElementById('totalPerfPonderee YTD').textContent =
-    "Total des performances pondérées YTD: " + totalPerfPonderee YTD.toFixed(2) + " %";
-
-    drawPieChart(allocations);
-    updateLegend(allocations);
-    drawBarChart(allocations);
+function fmt(n, withSign=true){
+  const s = n.toFixed(1).replace('.', ',');
+  if(withSign && n > 0) return '+' + s + '%';
+  return s + '%';
 }
 
-function drawPieChart(data) {
-    const canvas = document.getElementById("pieChart");
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const total = data.reduce((sum, item) => sum + item.value, 0);
-    let startAngle = 0;
-
-    data.forEach(item => {
-        if (item.value > 0) {
-            const sliceAngle = (item.value / total) * 2 * Math.PI;
-
-            ctx.beginPath();
-            ctx.moveTo(200, 200);
-            ctx.arc(200, 200, 180, startAngle, startAngle + sliceAngle);
-            ctx.closePath();
-            ctx.fillStyle = item.color;
-            ctx.fill();
-
-            startAngle += sliceAngle;
-        }
-    });
+function totalAlloc(){
+  return data.reduce((s,d)=>s+d.alloc,0);
 }
 
-function updateLegend(data) {
-    const legend = document.getElementById("legend");
-    legend.innerHTML = "";
-
-    data.forEach(item => {
-        if (item.value > 0) {
-            const div = document.createElement("div");
-            div.className = "legend-item";
-
-            div.innerHTML = `
-                <div class="color-box" style="background:${item.color}"></div>
-                ${item.name} : ${item.value.toFixed(1)}%
-            `;
-
-            legend.appendChild(div);
-        }
-    });
+function weightedFor(key){
+  return data.reduce((s,d)=>s + d[key]*d.alloc/100, 0);
 }
 
-function drawBarChart(data) {
-    const canvas = document.getElementById("barChart");
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const max = Math.max(...data.map(item => item.value));
-    const barWidth = 40;
-    const gap = 20;
-    const startX = 50;
-    const baseY = 300;
-
-    data.forEach((item, index) => {
-        const barHeight = (item.value / max) * 250;
-
-        ctx.fillStyle = item.color;
-        ctx.fillRect(
-            startX + index * (barWidth + gap),
-            baseY - barHeight,
-            barWidth,
-            barHeight
-        );
-
-        ctx.fillStyle = "#000";
-        ctx.font = "14px Arial";
-        ctx.fillText(item.value.toFixed(1) + "%", startX + index * (barWidth + gap), baseY - barHeight - 10);
-
-        ctx.fillText(item.name.substring(0, 8), startX + index * (barWidth + gap), baseY + 20);
-    });
+function renderTabs(){
+  tabsEl.innerHTML = '';
+  PERIODS.forEach(p=>{
+    const b = document.createElement('button');
+    b.className = 'tab' + (p.key===selectedPeriod ? ' active' : '');
+    b.textContent = p.label;
+    b.onclick = ()=>{ selectedPeriod = p.key; renderAll(); };
+    tabsEl.appendChild(b);
+  });
 }
 
-updateAllocation(document.querySelector('input[type="range"]'));
+function renderTape(){
+  const total = totalAlloc();
+  totalLabelEl.textContent = fmt(total, false);
+  totalLabelEl.className = 'tape-total' + (Math.abs(total-100) > 0.05 ? (total>100?' over':' under') : '');
+
+  tapeEl.innerHTML = '';
+  if(total <= 0){
+    const e = document.createElement('div');
+    e.className = 'tape-empty';
+    e.textContent = 'aucune allocation';
+    tapeEl.appendChild(e);
+    return;
+  }
+  data.forEach((d,i)=>{
+    if(d.alloc <= 0) return;
+    const seg = document.createElement('div');
+    seg.className = 'tape-seg';
+    seg.style.width = (d.alloc/Math.max(total,100))*100 + '%';
+    seg.style.background = palette[i % palette.length];
+    seg.title = d.name + ' — ' + fmt(d.alloc, false);
+    tapeEl.appendChild(seg);
+  });
+}
+
+function renderSummary(){
+  summaryEl.innerHTML = '';
+  PERIODS.forEach(p=>{
+    const val = weightedFor(p.key);
+    const cell = document.createElement('div');
+    cell.className = 'sum-cell' + (p.key===selectedPeriod ? ' active' : '');
+    cell.innerHTML = `<div class="k">${p.label}</div><div class="v" style="color:${val>=0?'var(--pos)':'var(--neg)'}">${fmt(val)}</div>`;
+    summaryEl.appendChild(cell);
+  });
+}
+
+function renderList(){
+  listEl.innerHTML = '';
+  data.forEach((d,i)=>{
+    const row = document.createElement('div');
+    row.className = 'row' + (d.alloc<=0 ? ' zero' : '');
+
+    const contribVal = d[selectedPeriod]*d.alloc/100;
+
+    row.innerHTML = `
+      <div>
+        <div class="name">${d.name}</div>
+        <div class="isin">${d.isin}</div>
+        <div class="perfs">
+          <span class="${d.p7>=0?'pos':'neg'}${selectedPeriod==='p7'?' sel':''}">7j ${fmt(d.p7)}</span>
+          <span class="${d.p1m>=0?'pos':'neg'}${selectedPeriod==='p1m'?' sel':''}">1m ${fmt(d.p1m)}</span>
+          <span class="${d.p3m>=0?'pos':'neg'}${selectedPeriod==='p3m'?' sel':''}">3m ${fmt(d.p3m)}</span>
+          <span class="${d.ytd>=0?'pos':'neg'}${selectedPeriod==='ytd'?' sel':''}">YTD ${fmt(d.ytd)}</span>
+        </div>
+      </div>
+      <div class="slider-cell">
+        <input type="range" min="0" max="100" step="0.5" value="${d.alloc}" data-idx="${i}" class="slider">
+      </div>
+      <input type="number" min="0" max="100" step="0.5" value="${d.alloc}" data-idx="${i}" class="pct-input">
+      <div class="contrib ${contribVal>0?'pos':contribVal<0?'neg':'zero'}">${fmt(contribVal)}</div>
+    `;
+    listEl.appendChild(row);
+  });
+
+  listEl.querySelectorAll('.slider').forEach(el=>{
+    el.addEventListener('input', e=>{
+      const idx = +e.target.dataset.idx;
+      data[idx].alloc = +e.target.value;
+      renderAll();
+    });
+  });
+  listEl.querySelectorAll('.pct-input').forEach(el=>{
+    el.addEventListener('input', e=>{
+      const idx = +e.target.dataset.idx;
+      let v = +e.target.value;
+      if(isNaN(v)) v = 0;
+      v = Math.max(0, Math.min(100, v));
+      data[idx].alloc = v;
+      renderAll();
+    });
+  });
+}
+
+function renderAll(){
+  renderTabs();
+  renderTape();
+  renderSummary();
+  renderList();
+}
+
+document.getElementById('resetBtn').onclick = ()=>{
+  data = JSON.parse(JSON.stringify(initialData));
+  renderAll();
+};
+
+document.getElementById('normalizeBtn').onclick = ()=>{
+  const total = totalAlloc();
+  if(total <= 0) return;
+  data.forEach(d=> d.alloc = Math.round((d.alloc/total)*1000)/10 );
+  renderAll();
+};
+
+renderAll();
 </script>
-
 </body>
 </html>
-   
+ 
       
 
 
