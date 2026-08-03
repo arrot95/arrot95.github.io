@@ -23,6 +23,8 @@
         input[type="range"] {
             width: 120px;
         }
+        .positive { color: green; font-weight: bold; }
+        .negative { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -30,81 +32,28 @@
 <h1>Simulateur d'allocation</h1>
 
 <table id="allocationTable">
-    <tr data-perf="65.9">
-        <td>Semiconductors</td>
-        <td>+65,9%</td>
-        <td>
-            <input type="range" min="0" max="100" value="10" oninput="updateAllocation(this)">
-            <span class="allocValue">10</span>%
-        </td>
-        <td class="perfPonderee"></td>
-    </tr>
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Perf YTD</th>
+            <th>Allocation (%)</th>
+            <th>Perf pondérée</th>
+        </tr>
+    </thead>
+    <tbody>
 
-    <tr data-perf="19.4">
-        <td>Euro Stoxx Banks</td>
-        <td>+19,4%</td>
-        <td>
-            <input type="range" min="0" max="100" value="15" oninput="updateAllocation(this)">
-            <span class="allocValue">15</span>%
-        </td>
-        <td class="perfPonderee"></td>
-    </tr>
-</table>
+        <tr data-perf="65.9">
+            <td>Semiconductors</td>
+            <td class="positive">+65,9%</td>
+            <td>
+                <input type="range" min="0" max="100" value="10" oninput="updateAllocation(this)">
+                <span class="allocValue">10</span>%
+            </td>
+            <td class="perfPonderee"></td>
+        </tr>
 
-<p id="totalAllocation"></p>
-<p id="perfGlobale"></p>
-
-<script>
-function updateAllocation(slider) {
-    const row = slider.closest('tr');
-    const allocSpan = row.querySelector('.allocValue');
-    const perfCell = row.querySelector('.perfPonderee');
-    const perf = parseFloat(row.getAttribute('data-perf'));
-
-    const alloc = parseFloat(slider.value);
-    allocSpan.textContent = alloc; // ← CORRECTION IMPORTANTE
-
-    const perfPond = (alloc / 100) * perf;
-    perfCell.textContent = perfPond.toFixed(2) + " %";
-
-    // recalcul du total
-    let total = 0;
-    let perfGlobale = 0;
-
-    document.querySelectorAll('#allocationTable tr').forEach(r => {
-        const s = r.querySelector('input[type="range"]');
-        const p = parseFloat(r.getAttribute('data-perf'));
-        const a = parseFloat(s.value);
-
-        total += a;
-        perfGlobale += (a / 100) * p;
-    });
-
-    document.getElementById('totalAllocation').textContent =
-        "Total allocation : " + total.toFixed(1) + " %";
-
-    document.getElementById('perfGlobale').textContent =
-        "Performance globale pondérée : " + perfGlobale.toFixed(2) + " %";
-}
-</script>
-
-</body>
-</html>
-
-
-      
-
-
-
-  
-  
-    
-  
- 
-   
-
-  
-
+        <tr data-perf="19.4">
+            <td>Euro Stoxx Banks</td>
 
 
 
