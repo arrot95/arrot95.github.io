@@ -75,7 +75,7 @@
                 <input type="range" min="0" max="100" value="10" oninput="updateAllocation(this)">
                 <span class="allocValue">10</span>%
             </td>
-            <td class="perfPonderee"></td>
+            <td class="perfPonderee YTD"></td>
         </tr>
 
         <tr data-perf="19.4">
@@ -101,7 +101,7 @@
                 <input type="range" min="0" max="100" value="10" oninput="updateAllocation(this)">
                 <span class="allocValue">10</span>%
             </td>
-            <td class="perfPonderee"></td>
+            <td class="perfPonderee YTD"></td>
         </tr>
 
         <tr data-perf="13.6">
@@ -127,7 +127,7 @@
                 <input type="range" min="0" max="100" value="10" oninput="updateAllocation(this)">
                 <span class="allocValue">10</span>%
             </td>
-            <td class="perfPonderee"></td>
+            <td class="perfPonderee YTD"></td>
         </tr>
 
         <tr data-perf="11.6">
@@ -166,7 +166,7 @@
                 <input type="range" min="0" max="100" value="0" oninput="updateAllocation(this)">
                 <span class="allocValue">0</span>%
             </td>
-            <td class="perfPonderee"></td>
+            <td class="perfPonderee YTD"></td>
         </tr>
 
         <tr data-perf="4.6">
@@ -263,7 +263,7 @@ const colors = [
         perfGlobale += (a / 100) * p;
 
         r.querySelector('.allocValue').textContent = a.toFixed(1);
-        r.querySelector('.perfPonderee').textContent = ((a / 100) * p).toFixed(2) + " %";
+        r.querySelector('.perfPonderee YTD').textContent = ((a / 100) * p).toFixed(2) + " %";
 
         allocations.push({
             name: r.children[0].textContent,
@@ -278,7 +278,7 @@ const colors = [
     document.getElementById('perfGlobale').textContent =
         "Performance globale pondérée : " + perfGlobale.toFixed(2) + " %";
      
-// Total des performances pondérées (somme des perf pondérées de chaque ligne)
+// Total des performances pondérées (somme des perf pondérées YTD de chaque ligne)
 let totalPerfPonderee = rows.reduce((sum, r) => {
     const s = r.querySelector('input[type="range"]');
     const p = parseFloat(r.getAttribute('data-perf'));
@@ -286,8 +286,8 @@ let totalPerfPonderee = rows.reduce((sum, r) => {
     return sum + (a / 100) * p;
 }, 0);
 
-document.getElementById('totalPerfPonderee').textContent =
-    "Total des performances pondérées : " + totalPerfPonderee.toFixed(2) + " %";
+document.getElementById('totalPerfPonderee YTD').textContent =
+    "Total des performances pondérées YTD: " + totalPerfPonderee YTD.toFixed(2) + " %";
 
     drawPieChart(allocations);
     updateLegend(allocations);
